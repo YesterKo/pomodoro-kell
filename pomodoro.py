@@ -48,6 +48,9 @@ class PomodoroTimer:
 
     async def start_timer(this, length, brightness):
     
+        this.start_time = time.ticks_ms()
+        this.stop_time = time.ticks_add(this.start_time, length * 60000)
+
         for x in range(12):
             this.neopixel[x] = (0,0,0)
         this.neopixel.write()
@@ -62,6 +65,25 @@ class PomodoroTimer:
                 this.neopixel.write()
                 #print(f'starting sleep for {delay}ms. Brightness is y.')
                 await asyncio.sleep_ms(delay)
+
+    async def render_display():
+        current_time = time.ticks_diff(this.start_time, time.ticks_ms())
+        display_samm = len(this.neopixel)*256
+        sammu_pikkus = time.ticks_diff(this.start_time,this.stop_time) / display_samm
+        sammud = current_time / sammu_pikkus
+        full_leds = sammud // 256
+        last_led_brightness = sammud % 256
+        #placeholder = current_time / (time.ticks_diff(this.start_time, this.stop_time) / (len(this.neopixel) * 256))
+
+        for x in range(full_leds):
+            this.neopixel[x] = (brightness,0,0)
+
+        this.neopixel[full_leds+1] = last_led_brightness
+        
+        for x in range(full_leds+1, len(this.neopixel)):
+            this.neopixel[x] = (0,0,0)
+
+        this.neopixel.write()
 
 
                 
