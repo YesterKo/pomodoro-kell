@@ -2,6 +2,7 @@ import colorsys
 import uasyncio as asyncio
 import time
 from config import *
+from primitives import WaitAny
 
 class PomodoroTimer:
 
@@ -28,7 +29,8 @@ class PomodoroTimer:
 
 
     async def main(this):
-        asyncio.create_task(this.toggle_ticking())
+        asyncio.create_task(this.ticking_toggler())
+        asyncio.create_task(this.brightness_changer())
         while True:
             if this.status == 'work':
                 await this.start_timer(WORK_LENGTH)
@@ -38,7 +40,7 @@ class PomodoroTimer:
                 this.status = 'work'
     
 
-    async def toggle_ticking(this):
+    async def ticking_toggler(this):
         while True:
             await this.nupud.cp.wait()
             this.nupud.cp.clear()
@@ -50,6 +52,28 @@ class PomodoroTimer:
                 this.status = 'work'
                 this.ticking.set()
                 print('ticking continued')
+
+
+    async def brightness_changer(this):
+        while True:
+            event = await WaitAny((this.nupud.cw,this.nupud.ccw)).wait()
+
+            if event is this.nupud.cw:
+                this.nupud.cw.clear()
+
+                this.brightness += 1
+                if this.brightness > 255:
+                    this.brightness = 255
+
+                this.render_display()
+            else:
+                this.nupud.ccw.clear()
+
+                this.brightness -= 1
+                if this.brightness < 1:
+                    this.brightness = 1
+
+                this.render_display()
     
 
     async def start_timer(this, length):
