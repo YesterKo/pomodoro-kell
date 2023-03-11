@@ -4,159 +4,100 @@ import time
 from config import *
 from primitives import WaitAny
 
+
 class PomodoroTimer:
 
-    def __init__(this, np, nupud):
-        this.neopixel = np
-        this.ticking = asyncio.Event()
-        this.nupud = nupud
-        this.status = 'work'
-        this.brightness = BRIGHTNESS
-    
-    async def _show_startup_animation(this, length):
-        sleep_length = int(1000 / len(this.neopixel) / this.brightness)
-        for x in range(len(this.neopixel)):
-            for y in range(this.brightness):
-                await this.ticking.wait()
-                this.neopixel[x] = (y+1,0,0)
-                this.neopixel.write()
+    def __init__(self, np, nupud):
+        self.neopixel = np
+        self.ticking = asyncio.Event()
+        self.nupud = nupud
+        self.status = 'work'
+        self.brightness = BRIGHTNESS
+
+    async def _show_startup_animation(self, length):
+        sleep_length = int(1000 / len(self.neopixel) / self.brightness)
+        for x in range(len(self.neopixel)):
+            for y in range(self.brightness):
+                await self.ticking.wait()
+                self.neopixel[x] = (y+1, 0, 0)
+                self.neopixel.write()
                 await asyncio.sleep_ms(sleep_length)
 
-    def _show_fill(this,value):
-        for x in range(len(this.neopixel)):
-            this.neopixel[x] = value
-        this.neopixel.write()
+    def _show_fill(self, value):
+        for x in range(len(self.neopixel)):
+            self.neopixel[x] = value
+        self.neopixel.write()
 
-
-    async def main(this):
-        asyncio.create_task(this.ticking_toggler())
-        asyncio.create_task(this.brightness_changer())
+    async def main(self):
+        asyncio.create_task(self.ticking_toggler())
+        asyncio.create_task(self.brightness_changer())
         while True:
-            if this.status == 'work':
-                await this.start_timer(WORK_LENGTH)
-                this.status = 'break'
-            elif this.status == 'break':
-                await this.start_timer(BREAK_LENGTH)
-                this.status = 'work'
-    
+            if self.status == 'work':
+                await self.start_timer(WORK_LENGTH)
+                self.status = 'break'
+            elif self.status == 'break':
+                await self.start_timer(BREAK_LENGTH)
+                self.status = 'work'
 
-    async def ticking_toggler(this):
+    async def ticking_toggler(self):
         while True:
-            await this.nupud.cp.wait()
-            this.nupud.cp.clear()
-            if this.status == 'work':
-                this.status = 'work_paused'
-                this.ticking.clear()
+            await self.nupud.cp.wait()
+            self.nupud.cp.clear()
+            if self.status == 'work':
+                self.status = 'work_paused'
+                self.ticking.clear()
                 print('ticking stopped')
-            elif this.status == 'work_paused':
-                this.status = 'work'
-                this.ticking.set()
+            elif self.status == 'work_paused':
+                self.status = 'work'
+                self.ticking.set()
                 print('ticking continued')
 
-
-    async def brightness_changer(this):
+    async def brightness_changer(self):
         while True:
-            event = await WaitAny((this.nupud.cw,this.nupud.ccw)).wait()
-
-            if event is this.nupud.cw:
-                this.nupud.cw.clear()
-
-                this.brightness += 1
-                if this.brightness > 255:
-                    this.brightness = 255
-
-                this.render_display()
+            event = await WaitAny((self.nupud.cw, self.nupud.ccw)).wait()
+            if event is self.nupud.cw:
+                self.nupud.cw.clear()
+                self.brightness = min(self.brightness + 1, 255)
+                self.render_display()
             else:
-                this.nupud.ccw.clear()
+                self.nupud.ccw.clear()
+                self.brightness = max(self.brightness - 1, 1)
+                self.render_display()
 
-                this.brightness -= 1
-                if this.brightness < 1:
-                    this.brightness = 1
+    async def start_timer(self, length):
+        self.start_time = time.ticks_ms()
+        self.stop_time = time.ticks_add(self.start_time, length * 60000)
+        self._show_fill((0, 0, 0))
+        await self._show_startup_animation(0)
+        await self.start_display_renderer()
 
-                this.render_display()
-    
-
-    async def start_timer(this, length):
-    
-        this.start_time = time.ticks_ms()
-        this.stop_time = time.ticks_add(this.start_time, length * 60000)
-
-        this._show_fill((0,0,0))
-
-        await this._show_startup_animation(0)
-                
-        await this.start_display_renderer()
-        #delay = int(length * 60000 / 12 / brightness)
-        #
-        #for x in range(0,12):
-        #    for y in range(brightness,-1,-1):
-        #        this.neopixel[x] = (y,0,0)
-        #        this.neopixel.write()
-        #        #print(f'starting sleep for {delay}ms. Brightness is y.')
-        #        await asyncio.sleep_ms(delay)
-
-    def render_display(this):
-        current_time = time.ticks_diff(this.stop_time, time.ticks_ms())
-        display_samm = len(this.neopixel)*this.brightness
-        sammu_pikkus = time.ticks_diff(this.stop_time,this.start_time) / display_samm
+    def render_display(self):
+        current_time = time.ticks_diff(self.stop_time, time.ticks_ms())
+        display_samm = len(self.neopixel)*self.brightness
+        sammu_pikkus = time.ticks_diff(self.stop_time, self.start_time) / display_samm
         sammud = current_time / sammu_pikkus
-        full_leds = int(sammud // this.brightness)
-        last_led_brightness = int(sammud % this.brightness)
-        #placeholder = current_time / (time.ticks_diff(this.start_time, this.stop_time) / (len(this.neopixel) * this.brightness))
+        full_leds = int(sammud // self.brightness)
+        last_led_brightness = int(sammud % self.brightness)
+        # placeholder = current_time / (time.ticks_diff(self.start_time, self.stop_time) / (len(self.neopixel) * self.brightness))
         print(f'full_leds: {full_leds}')
         print(f'last_led_brightness: {last_led_brightness}')
+        for x in range(len(self.neopixel)):
+            self.neopixel[x] = (0, 0, 0)
+        for x in range(len(self.neopixel)-1, len(self.neopixel) - full_leds - 1, -1):
+            self.neopixel[x] = (self.brightness, 0, 0)
+        self.neopixel[len(self.neopixel) - full_leds - 1] = (last_led_brightness, 0, 0)
+        self.neopixel.write()
 
-        for x in range(len(this.neopixel)):
-            this.neopixel[x] = (0,0,0)
-
-        for x in range(len(this.neopixel)-1, len(this.neopixel) - full_leds - 1, -1):
-            this.neopixel[x] = (this.brightness,0,0)
-
-        this.neopixel[len(this.neopixel) - full_leds - 1] = (last_led_brightness,0,0)
-        
-
-        this.neopixel.write()
-
-    async def start_display_renderer(this):
-        sammu_pikkus = (time.ticks_diff(this.stop_time,this.start_time) / (len(this.neopixel) * this.brightness))
-        
-        while time.ticks_diff(this.stop_time,time.ticks_ms()) > 10:
-            this.render_display()
-            await asyncio.sleep_ms(min(time.ticks_diff(this.stop_time, time.ticks_ms()), int(sammu_pikkus)))
-
-        this._show_fill((this.brightness,0,0))
+    async def start_display_renderer(self):
+        sammu_pikkus = (time.ticks_diff(self.stop_time, self.start_time) / (len(self.neopixel) * self.brightness))
+        while time.ticks_diff(self.stop_time, time.ticks_ms()) > 10:
+            self.render_display()
+            await asyncio.sleep_ms(min(time.ticks_diff(self.stop_time, time.ticks_ms()), int(sammu_pikkus)))
+        self._show_fill((self.brightness, 0, 0))
         await asyncio.sleep_ms(500)
-        this._show_fill((0,0,0))
+        self._show_fill((0, 0, 0))
         await asyncio.sleep_ms(500)
-        this._show_fill((this.brightness,0,0))
+        self._show_fill((self.brightness, 0, 0))
         await asyncio.sleep_ms(500)
-        this._show_fill((0,0,0))
+        self._show_fill((0, 0, 0))
         await asyncio.sleep_ms(500)
-        
-
-
-
-                
-# Võta Hetke time.ms.
-# Arvuta lõpus olev time.ms, saad suure arvu.
-# jaga ledi kogusammude arv suure arvuga.
-# jaga hetke time.ms jagatisega, saad teada ledide tulemuse.
-# ledide tulemuse jagades yhe ledi väärtuste arvuga saan teada, mitu ledi full brightnessil põleb
-# Jääk on n+1 ledi poolik põlemine
-    
-#     for x in range(0,12):
-#         np[x] = (brightness,0,0)
-#     np.write()
-#     time.sleep_ms(250)
-#     for x in range(0,12):
-#         np[x] = (0,0,0)
-#     np.write()
-#     time.sleep_ms(250)
-#     for x in range(0,12):
-#         np[x] = (brightness,0,0)
-#     np.write()
-#     time.sleep_ms(250)
-#     for x in range(0,12):
-#         np[x] = (0,0,0)
-#     np.write()
-    
