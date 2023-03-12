@@ -25,9 +25,9 @@ async def main():
     set_global_exception()
 
     stop = asyncio.Event()
-    np = neopixel.NeoPixel(machine.Pin(NEOPIXEL_PIN), NEOPIXEL_LEDS)
+    leds = neopixel.NeoPixel(machine.Pin(NEOPIXEL_PIN), NEOPIXEL_LEDS)
     nupud = multiwheel.NupudListener()
-    pt = pomodoro.PomodoroTimer(np, nupud)
+    pt = pomodoro.PomodoroTimer(leds, nupud)
 
     asyncio.create_task(nupud.main())
     asyncio.create_task(pt.main())
