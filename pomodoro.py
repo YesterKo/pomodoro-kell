@@ -2,7 +2,7 @@ import colorsys
 import uasyncio as asyncio
 import time
 from config import *
-from primitives import WaitAny
+from primitives import WaitAny, Delay_ms
 
 
 class PomodoroTimer:
@@ -101,3 +101,39 @@ class PomodoroTimer:
         await asyncio.sleep_ms(500)
         self._show_fill((0, 0, 0))
         await asyncio.sleep_ms(500)
+
+class ImprovedDelay(Delay_ms):
+    
+    def trigger(self, duration=0):  # Update absolute end time, 0-> ctor default
+        if self._mtask is None:
+            raise RuntimeError("Delay_ms.deinit() has run.")
+        self._tend = time.ticks_add(ticks_ms(), duration if duration > 0 else self._durn)
+        self._tdur = duration if duration > 0 else self._durn
+        self._retn = None  # Default in case cancelled.
+        self._busy = True
+        self._trig.set()
+
+    def change(self, duration=0):
+        if self._mtask is None:
+            raise RunTimeError("Delay_ms.deinit() has run.")
+        self._tend = time.ticks_add(self._tend, duration if duration > 0 else self._durn - self._tdur)
+        self._tdur = duration if duration > 0 else self._durn
+        self._retn = None  # Default in case cancelled.
+        self._busy = True
+        self._trig.set()
+
+    def pause(self):
+        self._ttask.cancel()
+        self._ttask = self._fake
+        self._trem = time.ticks_diff(self._tend, time.ticks_ms())
+        self._busy = False
+        self._tout.clear()
+        
+    def continue(self, duration=0):
+        if self._mtask is None:
+            raise RunTimeError("Delay_ms.deinit() has run.")
+        self._tend = time.ticks_add(time.ticks_ms(), self._trem)
+        self._tdur = duration if duration > 0 else self._durn
+        self._retn = None  # Default in case cancelled.
+        self._busy = True
+        self._trig.set()
