@@ -9,7 +9,8 @@ class PomodoroTimer:
 
     def __init__(self, np, nupud):
         self.neopixel = np
-        self.ticking = asyncio.Event()
+        self.not_paused = asyncio.Event()
+        self.not_paused.set()
         self.nupud = nupud
         self.status = 'work'
         self.brightness = BRIGHTNESS
@@ -18,7 +19,7 @@ class PomodoroTimer:
         sleep_length = int(1000 / len(self.neopixel) / self.brightness)
         for x in range(len(self.neopixel)):
             for y in range(self.brightness):
-                await self.ticking.wait()
+                await self.not_paused.wait()
                 self.neopixel[x] = (y+1, 0, 0)
                 self.neopixel.write()
                 await asyncio.sleep_ms(sleep_length)
@@ -29,7 +30,7 @@ class PomodoroTimer:
         self.neopixel.write()
 
     async def main(self):
-        asyncio.create_task(self.ticking_toggler())
+        asyncio.create_task(self.pause_toggler())
         asyncio.create_task(self.brightness_changer())
         while True:
             if self.status == 'work':
@@ -39,18 +40,19 @@ class PomodoroTimer:
                 await self.start_timer(BREAK_LENGTH)
                 self.status = 'work'
 
-    async def ticking_toggler(self):
+    async def pause_toggler(self):
         while True:
             await self.nupud.cp.wait()
             self.nupud.cp.clear()
-            if self.status == 'work':
-                self.status = 'work_paused'
-                self.ticking.clear()
+            if self.not_paused.is_set():
+                self.not_paused.clear()
                 print('ticking stopped')
-            elif self.status == 'work_paused':
-                self.status = 'work'
-                self.ticking.set()
+                self.remaining_time = time.ticks_diff(self.stop_time, time.ticks_ms())
+            else:
                 print('ticking continued')
+                self.start_time = time.ticks_ms()
+                self.stop_time = time.ticks_add(self.start_time, self.remaining_time)
+                self.not_paused.set()
 
     async def brightness_changer(self):
         while True:
@@ -91,6 +93,7 @@ class PomodoroTimer:
     async def start_display_renderer(self):
         sammu_pikkus = (time.ticks_diff(self.stop_time, self.start_time) / (len(self.neopixel) * self.brightness))
         while time.ticks_diff(self.stop_time, time.ticks_ms()) > 10:
+            await self.not_paused.wait()
             self.render_display()
             await asyncio.sleep_ms(min(time.ticks_diff(self.stop_time, time.ticks_ms()), int(sammu_pikkus)))
         self._show_fill((self.brightness, 0, 0))
