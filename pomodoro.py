@@ -12,8 +12,8 @@ class PomodoroTimer:
         self.not_paused = asyncio.Event()
         self.not_paused.set()
         self.nupud = nupud
-        self.status = 'work'
         self.brightness = BRIGHTNESS
+        self._time_since_long_break = 0
 
     async def _show_startup_animation(self, length):
         sleep_length = int(1000 / len(self.neopixel) / self.brightness)
@@ -33,12 +33,12 @@ class PomodoroTimer:
         asyncio.create_task(self.pause_toggler())
         asyncio.create_task(self.brightness_changer())
         while True:
-            if self.status == 'work':
-                await self.start_timer(WORK_LENGTH)
-                self.status = 'break'
-            elif self.status == 'break':
+            await self.start_timer(WORK_LENGTH)
+            self._time_since_long_break += 1
+            if self._time_since_long_break >= LONG_BREAK_INTERVAL:
+                await self.start_timer(LONG_BREAK_LENGTH)
+            else:
                 await self.start_timer(BREAK_LENGTH)
-                self.status = 'work'
 
     async def pause_toggler(self):
         while True:
