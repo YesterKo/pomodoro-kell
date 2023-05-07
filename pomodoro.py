@@ -59,7 +59,7 @@ class PomodoroTimer:
             event = await WaitAny((self.nupud.cw, self.nupud.ccw)).wait()
             if event is self.nupud.cw:
                 self.nupud.cw.clear()
-                self.brightness = min(self.brightness + 1, 255)
+                self.brightness = min(self.brightness + 1, 6)
                 self.render_display()
             else:
                 self.nupud.ccw.clear()
