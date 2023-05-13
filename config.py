@@ -1,5 +1,6 @@
 NEOPIXEL_PIN        = 18
 NEOPIXEL_LEDS       = 16
+PIEZO_PIN           = 22
 WORK_LENGTH         = 20
 BREAK_LENGTH        = 5
 LONG_BREAK_LENGTH   = 30
@@ -7,3 +8,4 @@ LONG_BREAK_INTERVAL = 4
 BRIGHTNESS          = 3
 MAX_BRIGHTNESS      = 6
 REVERSE             = 1
+SOUND               = 1

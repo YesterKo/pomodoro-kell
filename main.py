@@ -22,7 +22,8 @@ async def main():
     stop = asyncio.Event()
     leds = neopixel.NeoPixel(machine.Pin(NEOPIXEL_PIN), NEOPIXEL_LEDS, reverse = REVERSE)
     nupud = multiwheel.NupudListener()
-    pt = pomodoro.PomodoroTimer(leds, nupud)
+    piezo = machine.Pin(PIEZO_PIN, machine.Pin.OUT)
+    pt = pomodoro.PomodoroTimer(leds, nupud, piezo)
 
     asyncio.create_task(nupud.main())
     asyncio.create_task(pt.main())

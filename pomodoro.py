@@ -7,11 +7,12 @@ from primitives import WaitAny, Delay_ms
 
 class PomodoroTimer:
 
-    def __init__(self, np, nupud):
+    def __init__(self, np, nupud, piezo):
         self.neopixel = np
         self.not_paused = asyncio.Event()
         self.not_paused.set()
         self.nupud = nupud
+        self.piezo = piezo
         self.brightness = BRIGHTNESS
         self._time_since_long_break = 0
         self.color = (0.166667,1)
@@ -58,6 +59,7 @@ class PomodoroTimer:
             else:
                 await asyncio.sleep_ms(0)
 
+
     async def brightness_changer(self):
         while True:
             event = await WaitAny((self.nupud.cw, self.nupud.ccw)).wait()
@@ -102,9 +104,11 @@ class PomodoroTimer:
             self.render_display()
             await asyncio.sleep_ms(min(time.ticks_diff(self.stop_time, time.ticks_ms()), int(sammu_pikkus)))
         self.status = 'finished'
+        asyncio.create_task(self.ring(5, 50, 50))
         await self._play_animation_flash(5, 50, 50, brightness = self.brightness + 10)
         await self.nupud.cp.wait()
         self.nupud.cp.clear()
+
     async def _play_animation_ring(self, duration, direction=0, *, brightness = None, color = None):
         if not brightness:
             brightness = self.brightness
@@ -128,6 +132,16 @@ class PomodoroTimer:
             self._show_fill((0,0,0))
             await asyncio.sleep_ms(off_time)
             loop_count = loop_count - 1 if loop_count is not None else None
+
+    async def ring(self, count, on_time, off_time):
+        if SOUND:
+            for _ in range(count):
+                self.piezo.on()
+                await asyncio.sleep_ms(on_time)
+                self.piezo.off()
+                await asyncio.sleep_ms(off_time)
+
+
 
 
 class ImprovedDelay(Delay_ms):
