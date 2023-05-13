@@ -28,11 +28,12 @@ class PomodoroTimer:
         while True:
             self.color = (0,1)
             await self.start_timer(WORK_LENGTH)
-            self._time_since_long_break += 1
             if self._time_since_long_break >= LONG_BREAK_INTERVAL:
+                self._time_since_long_break = 0
                 self.color = (1/6, 1)
                 await self.start_timer(LONG_BREAK_LENGTH)
             else:
+                self._time_since_long_break += 1
                 self.color = (1/3, 1)
                 await self.start_timer(BREAK_LENGTH)
 
