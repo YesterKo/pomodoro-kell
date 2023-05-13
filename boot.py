@@ -14,7 +14,7 @@ def do_connect(ssid, pwd):
 #esp.osdebug(None)
  
 # Attempt to connect to WiFi network
-do_connect('DS0264000000000_M', 'dsputnik')
+#do_connect('DS0264000000000_M', 'dsputnik')
  
-import webrepl
-webrepl.start()
+#import webrepl
+#webrepl.start()
