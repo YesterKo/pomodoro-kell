@@ -40,16 +40,19 @@ class PomodoroTimer:
     async def pause_toggler(self):
         while True:
             await self.nupud.cp.wait()
-            self.nupud.cp.clear()
-            if self.not_paused.is_set():
-                self.not_paused.clear()
-                print('ticking stopped')
-                self.remaining_time = time.ticks_diff(self.stop_time, time.ticks_ms())
+            if self.status == 'running':
+                self.nupud.cp.clear()
+                if self.not_paused.is_set():
+                    self.not_paused.clear()
+                    print('ticking stopped')
+                    self.remaining_time = time.ticks_diff(self.stop_time, time.ticks_ms())
+                else:
+                    print('ticking continued')
+                    self.start_time = time.ticks_diff(time.ticks_ms(), self.elapsed_time)
+                    self.stop_time = time.ticks_add(time.ticks_ms(), self.remaining_time)
+                    self.not_paused.set()
             else:
-                print('ticking continued')
-                self.start_time = time.ticks_ms()
-                self.stop_time = time.ticks_add(self.start_time, self.remaining_time)
-                self.not_paused.set()
+                await asyncio.sleep_ms(0)
 
     async def brightness_changer(self):
         while True:
@@ -64,6 +67,7 @@ class PomodoroTimer:
                 self.render_display()
 
     async def start_timer(self, length):
+        self.status = 'running'
         self.start_time = time.ticks_ms()
         self.stop_time = time.ticks_add(self.start_time, length * 60000)
         self._show_fill((0, 0, 0))
@@ -93,8 +97,10 @@ class PomodoroTimer:
             await self.not_paused.wait()
             self.render_display()
             await asyncio.sleep_ms(min(time.ticks_diff(self.stop_time, time.ticks_ms()), int(sammu_pikkus)))
+        self.status = 'finished'
         await self._play_animation_flash(5, 50, 50, brightness = self.brightness + 10)
         await self.nupud.cp.wait()
+        self.nupud.cp.clear()
     async def _play_animation_ring(self, duration, direction=0, *, brightness = None, color = None):
         if not brightness:
             brightness = self.brightness
