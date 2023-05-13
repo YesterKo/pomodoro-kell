@@ -1,4 +1,4 @@
-import colorsys
+from colorsys import hsv_to_rgb
 import uasyncio as asyncio
 import time
 from config import *
@@ -14,15 +14,8 @@ class PomodoroTimer:
         self.nupud = nupud
         self.brightness = BRIGHTNESS
         self._time_since_long_break = 0
+        self.color = (0.166667,1)
 
-    async def _show_startup_animation(self, length):
-        sleep_length = int(1000 / len(self.neopixel) / self.brightness)
-        for x in range(len(self.neopixel)):
-            for y in range(self.brightness):
-                await self.not_paused.wait()
-                self.neopixel[x] = (y+1, 0, 0)
-                self.neopixel.write()
-                await asyncio.sleep_ms(sleep_length)
 
     def _show_fill(self, value):
         for x in range(len(self.neopixel)):
@@ -33,11 +26,14 @@ class PomodoroTimer:
         asyncio.create_task(self.pause_toggler())
         asyncio.create_task(self.brightness_changer())
         while True:
+            self.color = (0,1)
             await self.start_timer(WORK_LENGTH)
             self._time_since_long_break += 1
             if self._time_since_long_break >= LONG_BREAK_INTERVAL:
+                self.color = (1/6, 1)
                 await self.start_timer(LONG_BREAK_LENGTH)
             else:
+                self.color = (1/3, 1)
                 await self.start_timer(BREAK_LENGTH)
 
     async def pause_toggler(self):
@@ -70,7 +66,7 @@ class PomodoroTimer:
         self.start_time = time.ticks_ms()
         self.stop_time = time.ticks_add(self.start_time, length * 60000)
         self._show_fill((0, 0, 0))
-        await self._show_startup_animation(0)
+        await self._play_animation_ring(1000)
         await self.start_display_renderer()
 
     def render_display(self):
@@ -79,15 +75,15 @@ class PomodoroTimer:
         sammu_pikkus = time.ticks_diff(self.stop_time, self.start_time) / display_samm
         sammud = current_time / sammu_pikkus
         full_leds = int(sammud // self.brightness)
-        last_led_brightness = int(sammud % self.brightness)
+        last_led_brightness = max(1,int(sammud % self.brightness))
         # placeholder = current_time / (time.ticks_diff(self.start_time, self.stop_time) / (len(self.neopixel) * self.brightness))
         print(f'full_leds: {full_leds}')
         print(f'last_led_brightness: {last_led_brightness}')
         for x in range(len(self.neopixel)):
             self.neopixel[x] = (0, 0, 0)
         for x in range(len(self.neopixel)-1, len(self.neopixel) - full_leds - 1, -1):
-            self.neopixel[x] = (self.brightness, 0, 0)
-        self.neopixel[len(self.neopixel) - full_leds - 1] = (last_led_brightness, 0, 0)
+            self.neopixel[x] = hsv_to_rgb(*self.color, self.brightness / 255)
+        self.neopixel[len(self.neopixel) - full_leds - 1] = hsv_to_rgb(*self.color, last_led_brightness / 255)
         self.neopixel.write()
 
     async def start_display_renderer(self):
@@ -96,14 +92,32 @@ class PomodoroTimer:
             await self.not_paused.wait()
             self.render_display()
             await asyncio.sleep_ms(min(time.ticks_diff(self.stop_time, time.ticks_ms()), int(sammu_pikkus)))
-        self._show_fill((self.brightness, 0, 0))
-        await asyncio.sleep_ms(500)
-        self._show_fill((0, 0, 0))
-        await asyncio.sleep_ms(500)
-        self._show_fill((self.brightness, 0, 0))
-        await asyncio.sleep_ms(500)
-        self._show_fill((0, 0, 0))
-        await asyncio.sleep_ms(500)
+        await self._play_animation_flash(5, 50, 50, brightness = self.brightness + 10)
+        await self.nupud.cp.wait()
+    async def _play_animation_ring(self, duration, direction=0, *, brightness = None, color = None):
+        if not brightness:
+            brightness = self.brightness
+        if not color:
+            color = self.color
+        sleep_length = int(duration / len(self.neopixel) / brightness)
+        for x in range(len(self.neopixel)):
+            for y in range(brightness+1):
+                await self.not_paused.wait()
+                self.neopixel[x] = hsv_to_rgb(*color, y/255)
+                self.neopixel.write()
+                await asyncio.sleep_ms(sleep_length)
+
+    async def _play_animation_flash(self, count, on_time, off_time, *, brightness = None, color = None): 
+        brightness = brightness or self.brightness
+        color = color or self.color
+        loop_count = count if count >= 0 else None
+        while loop_count != 0:
+            self._show_fill(hsv_to_rgb(*color, brightness / 255))
+            await asyncio.sleep_ms(on_time)
+            self._show_fill((0,0,0))
+            await asyncio.sleep_ms(off_time)
+            loop_count = loop_count - 1 if loop_count is not None else None
+
 
 class ImprovedDelay(Delay_ms):
     

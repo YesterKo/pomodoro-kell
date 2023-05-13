@@ -90,6 +90,7 @@ def hsv_to_rgb(  # pylint: disable=too-many-return-statements,inconsistent-retur
     :param float val: The value (or brightness) of the color to convert
     """
     if sat == 0.0:
+        val = int(val * 255)
         return val, val, val
     i = int(hue * 6.0)  # assume int() truncates!
     hue1 = (hue * 6.0) - i
