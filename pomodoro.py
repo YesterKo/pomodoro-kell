@@ -46,10 +46,14 @@ class PomodoroTimer:
                     self.not_paused.clear()
                     print('ticking stopped')
                     self.remaining_time = time.ticks_diff(self.stop_time, time.ticks_ms())
+                    self.elapsed_time = time.ticks_diff(time.ticks_ms(), self.start_time)
+                    flasher = asyncio.create_task(self._play_animation_flash(-1, 1000, 1000))
                 else:
                     print('ticking continued')
                     self.start_time = time.ticks_diff(time.ticks_ms(), self.elapsed_time)
                     self.stop_time = time.ticks_add(time.ticks_ms(), self.remaining_time)
+                    flasher.cancel()
+                    self.render_display()
                     self.not_paused.set()
             else:
                 await asyncio.sleep_ms(0)
