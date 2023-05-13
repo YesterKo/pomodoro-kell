@@ -132,7 +132,7 @@ class ImprovedDelay(Delay_ms):
         self._busy = False
         self._tout.clear()
         
-    def continue(self, duration=0):
+    def _continue(self, duration=0):
         if self._mtask is None:
             raise RunTimeError("Delay_ms.deinit() has run.")
         self._tend = time.ticks_add(time.ticks_ms(), self._trem)
