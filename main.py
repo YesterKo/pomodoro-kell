@@ -25,8 +25,7 @@ async def main():
     pt = pomodoro.PomodoroTimer(leds, nupud)
 
     asyncio.create_task(nupud.main())
-    #asyncio.create_task(pt.main())
-    asyncio.create_task(pt._play_animation_flash((0.3333, 1), 5, 1000, 500))
+    asyncio.create_task(pt.main())
     await stop.wait()
 
 try:
